@@ -1,7 +1,8 @@
 ---
 title: Privacy Policy,
 indexable: noindex,
-type: special
+type: special,
+allowReferral: true
 ---
 
 I take your privacy seriously. To better protect your privacy I have provided this privacy policy notice explaining the way your personal information is collected and used.
