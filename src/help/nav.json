@@ -1,0 +1,9 @@
+{
+    "Home": "/wiki/help/",
+    "Community Discussions": "https://github.com/itsdanjc/wiki/discussions",
+    "Getting Started": {
+        "Introduction": "/wiki/help/getting-started",
+        "Writing Articles": "/wiki/help/writing-articles",
+        "Adding New Topics": "/wiki/help/about-topics"
+    }
+}
