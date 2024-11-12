@@ -21,10 +21,9 @@ jobs:
       - name: Scan for HTML tags
         id: scan
         run: |
-          TAGS=("script" "iframe" "embed" "object")
+          TAGS=("style" "script" "iframe" "embed" "object")
           # See https://www.itsdanjc.com/wiki/help/rules-and-restrictions#prohibited
           
-          # Get a list of files changed in the pull request
           CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
 
           # Initialize an empty variable to track found tags
@@ -32,19 +31,16 @@ jobs:
 
           # Loop over each changed file and each tag
           for file in $CHANGED_FILES; do
-            # Skip non-Markdown files
             if [[ "$file" != *.md ]]; then
               continue
             fi
             for tag in "${TAGS[@]}"; do
-              # Search for the tag in the file and add to FOUND_TAGS if found
               if grep -qi "<$tag" "$file"; then
                 FOUND_TAGS+="$tag found in $file\n"
               fi
             done
           done
 
-          # Check if any tags were found
           if [[ -n "$FOUND_TAGS" ]]; then
             echo -e "Prohibited tags found:\n$FOUND_TAGS"
             exit 1
