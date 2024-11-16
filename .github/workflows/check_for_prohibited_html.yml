@@ -1,9 +1,9 @@
-name: Check For Prohibited Elements
+name: Check For Prohibited HTML Elements
 
 on:
   pull_request:
     types: [opened, synchronize]
-    
+
 permissions:
   pull-requests: write
 
@@ -15,21 +15,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install GitHub CLI
-        run: sudo apt-get install -y gh
+      - name: Get changed files
+        id: changes
+        run: |
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
 
       - name: Scan for HTML tags
         id: scan
         run: |
           TAGS=("style" "script" "iframe" "embed" "object")
-          # See https://www.itsdanjc.com/wiki/help/rules-and-restrictions#prohibited
+          CHANGED_FILES="${{ steps.changes.outputs.changed_files }}"
           
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
-
-          # Initialize an empty variable to track found tags
           FOUND_TAGS=""
-
-          # Loop over each changed file and each tag
           for file in $CHANGED_FILES; do
             if [[ "$file" != *.md ]]; then
               continue
@@ -40,7 +38,9 @@ jobs:
               fi
             done
           done
-
+          
+          echo "found_tags=$FOUND_TAGS" >> $GITHUB_OUTPUT
+          
           if [[ -n "$FOUND_TAGS" ]]; then
             echo -e "Prohibited tags found:\n$FOUND_TAGS"
             exit 1
@@ -49,7 +49,9 @@ jobs:
           fi
 
       - name: Close pull request if prohibited tags are found
-        if: failure()  # This step only runs if the previous step fails
+        if: failure()
         run: |
-          gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
-          gh pr close "${{ github.event.pull_request.number }}" --comment "Pull request closed due to prohibited content.\nFound: ${FOUND_TAGS}\nSee the [docs](https://www.itsdanjc.com/wiki/help/rules-and-restrictions#prohibited) for more info."
+          gh pr close "${{ github.event.pull_request.number }}" --comment "Pull request closed due to prohibited content found.\n
+          HTML detected: ${{ steps.scan.outputs.found_tags }}\n
+          See the [docs](https://www.itsdanjc.com/wiki/help/rules-and-restrictions#prohibited) for more info.\n
+          *If this a mistake, `@` a maintainer for a manual check."
