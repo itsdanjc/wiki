@@ -19,7 +19,8 @@ jobs:
         id: changes
         run: |
           CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
-          echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          PR_FILES=$(gh pr view "${{ github.event.pull_request.number }}" --json files --jq '.files[].path')
+          echo "changed_files=$PR_FILES" >> $GITHUB_OUTPUT
 
       - name: Scan for HTML tags
         id: scan
