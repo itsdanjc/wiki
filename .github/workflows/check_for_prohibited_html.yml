@@ -1,0 +1,58 @@
+name: Check For Prohibited HTML Elements
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  scan_html_tags:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get changed files
+        id: changes
+        run: |
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          PR_FILES=$(gh pr view "${{ github.event.pull_request.number }}" --json files --jq '.files[].path')
+          echo "changed_files=$PR_FILES" >> $GITHUB_OUTPUT
+
+      - name: Scan for HTML tags
+        id: scan
+        run: |
+          TAGS=("style" "script" "iframe" "embed" "object")
+          CHANGED_FILES="${{ steps.changes.outputs.changed_files }}"
+          
+          FOUND_TAGS=""
+          for file in $CHANGED_FILES; do
+            if [[ "$file" != *.md ]]; then
+              continue
+            fi
+            for tag in "${TAGS[@]}"; do
+              if grep -qi "<$tag" "$file"; then
+                FOUND_TAGS+="$tag found in $file\n"
+              fi
+            done
+          done
+          
+          echo "found_tags=$FOUND_TAGS" >> $GITHUB_OUTPUT
+          
+          if [[ -n "$FOUND_TAGS" ]]; then
+            echo -e "Prohibited tags found:\n$FOUND_TAGS"
+            exit 1
+          else
+            echo "No prohibited HTML tags found in the changed files."
+          fi
+
+      - name: Close pull request if prohibited tags are found
+        if: failure()
+        run: |
+          gh pr close "${{ github.event.pull_request.number }}" --comment "Pull request closed due to prohibited content found.\n
+          HTML detected: ${{ steps.scan.outputs.found_tags }}\n
+          See the [docs](https://www.itsdanjc.com/wiki/help/rules-and-restrictions#prohibited) for more info.\n
+          *If this a mistake, `@` a maintainer for a manual check."
